@@ -1,0 +1,124 @@
+<HTML>
+<head>
+<title>Crochet Pixel Image Converter</title>
+
+<style>
+table, td {
+  border: 1px solid black;
+}
+</style>
+
+</head>
+<body>
+
+<canvas id="canvas" width="4" height="4"></canvas>
+<p align="center" class="color-cell" id="hovered-color"></p>
+<img id="sourceImage" src="assets/4x4Colours.png">
+<button id="testButton" onclick="getPixelData()"> Test pixel data collection </button>
+
+<script>
+var img = new Image();
+img.crossOrigin = 'Anonymous';
+img = document.getElementById('sourceImage');
+img.src = "assets/4x4Colours.png"
+var canvas = document.getElementById('canvas');
+var ctx = canvas.getContext('2d');
+
+img.onload = function(){
+ctx.drawImage(img,0,0, canvas.width, canvas.height);
+img.style.display = 'none';
+};
+
+
+var pixelGrid = [];
+var hoveredColor = document.getElementById('hovered-color');
+
+function pick(event, destination) {
+	var x = event.clientX;
+	var y = event.clientY;
+	
+	var pixel = ctx.getImageData(x-8,y-8,1,1);
+	var data = pixel.data;
+	
+		const rgba = `rgba(${data[0]}, ${data[1]}, ${data[2]}, ${data[3] / 255})`;
+		destination.style.background = rgba;
+		destination.textContent = rgba;
+		
+		console.log(rgba);
+		
+	return rgba;
+}
+
+function getPixelData(){
+	
+	var t = document.createElement("TABLE");
+	t.setAttribute("id", "table");
+	document.body.appendChild(t);
+	
+	
+	for (let x=0; x < canvas.width; x++) {
+		
+		pixelGrid[x] = [];
+		
+		var r = document.createElement("TR");
+		r.setAttribute("id", "row" + x);
+		document.getElementById("table").appendChild(r);
+		
+		for (let y=0; y < canvas.height; y++) {
+		
+			var pixel = ctx.getImageData(y, x, 1, 1);
+			var pixData = pixel.data;
+			const rgba = `rgba(${pixData[0]}, ${pixData[1]}, ${pixData[2]}, ${pixData[3] / 255})`;
+			
+			pixelGrid[x][y] = rgba;
+			
+			var c = document.createElement("TD");
+			c.appendChild(document.createTextNode("x: " + x + " y: " + y));
+			c.style.backgroundColor = rgba;
+			document.getElementById("row" + x).appendChild(c);
+			
+			console.log('x :' + x, 'y :' + y);
+		}
+	}
+	
+}
+
+function displayPixelData(){
+	var x = 0;
+	var y = 0;
+	var colorCount = 0;
+	
+	for (x; x < canvas.width; x++) {
+		for (y; y < canvas.height; y++) {
+			//check if previous colour was the same
+			if (!(x == 0)){ //very first pixel has no previous pixel
+				
+				if (pixelGrid[x][y] == pixelGrid[x-1][y]) {
+					//previous pixel was same colour 
+					colorCount++
+				}
+				else {
+					//colour must have changed so record colour count and rgba
+					console.log('Colour: ' + rgba, 'Amount: ' + colorCount);
+					colorCount = 0;
+				}
+				
+			}
+			else {
+				//must be the first pixel in the row
+				
+			}
+			//if so increase current colour count
+			//when the colour changes, commit colour and count to record
+		}
+	}
+}
+
+canvas.addEventListener('mousemove', function(event) {
+	pick(event, hoveredColor);
+});
+
+</script>
+
+</body>
+</HTML>
