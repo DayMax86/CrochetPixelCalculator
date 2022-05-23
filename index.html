@@ -4,23 +4,34 @@
 
 <style>
 table, td {
-  border: 1px solid black;
+	border: 1px solid black;
+	color: fuchsia;
+}
+
+p {
+	color: gray;
 }
 </style>
 
 </head>
 <body>
 
-<canvas id="canvas" width="4" height="4"></canvas>
+<canvas id="canvas" width="100" height="100"></canvas>
 <p align="center" class="color-cell" id="hovered-color"></p>
-<img id="sourceImage" src="assets/4x4Colours.png">
-<button id="testButton" onclick="getPixelData()"> Test pixel data collection </button>
+<img id="sourceImage" src="assets/RectoVerso.png">
+
+<div class="slidecontainer">
+<input type="range" min="1" max="50" value="15" class="slider" id="sensitivitySlider">
+</div>
+
+<button id="dataDisplay" onclick="displayPixelData()"> Display pixel data </button>
+<p align="center" id="pixel-grid-data"></p>
 
 <script>
 var img = new Image();
 img.crossOrigin = 'Anonymous';
 img = document.getElementById('sourceImage');
-img.src = "assets/4x4Colours.png"
+img.src = "assets/RectoVerso.png"
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
 
@@ -51,18 +62,18 @@ function pick(event, destination) {
 
 function getPixelData(){
 	
-	var t = document.createElement("TABLE");
-	t.setAttribute("id", "table");
-	document.body.appendChild(t);
+	//var t = document.createElement("TABLE");
+	//t.setAttribute("id", "table");
+	//document.body.appendChild(t);
 	
 	
 	for (let x=0; x < canvas.width; x++) {
 		
 		pixelGrid[x] = [];
 		
-		var r = document.createElement("TR");
-		r.setAttribute("id", "row" + x);
-		document.getElementById("table").appendChild(r);
+		//var r = document.createElement("TR");
+		//r.setAttribute("id", "row" + x);
+		//document.getElementById("table").appendChild(r);
 		
 		for (let y=0; y < canvas.height; y++) {
 		
@@ -72,10 +83,10 @@ function getPixelData(){
 			
 			pixelGrid[x][y] = rgba;
 			
-			var c = document.createElement("TD");
-			c.appendChild(document.createTextNode("x: " + x + " y: " + y));
-			c.style.backgroundColor = rgba;
-			document.getElementById("row" + x).appendChild(c);
+			//var c = document.createElement("TD");
+			//c.appendChild(document.createTextNode("x: " + x + " y: " + y));
+			//c.style.backgroundColor = rgba;
+			//document.getElementById("row" + x).appendChild(c);
 			
 			console.log('x :' + x, 'y :' + y);
 		}
@@ -83,35 +94,108 @@ function getPixelData(){
 	
 }
 
-function displayPixelData(){
-	var x = 0;
-	var y = 0;
-	var colorCount = 0;
+function pixelSameColor(x, y, prevX, prevY) {
 	
-	for (x; x < canvas.width; x++) {
-		for (y; y < canvas.height; y++) {
+	var sensitivity = document.getElementById("sensitivitySlider").value;
+	
+	var currPixel = ctx.getImageData(x, y, 1, 1);
+	var currPixData = currPixel.data;
+	
+	var redValue = currPixData[0];
+	var greenValue = currPixData[1];
+	var blueValue = currPixData[2];
+	
+	var prevPixel = ctx.getImageData(prevX, prevY, 1, 1);
+	var prevPixData = prevPixel.data;
+	
+	var prevRedValue = prevPixData[0];
+	var prevGreenValue = prevPixData[1];
+	var prevBlueValue = prevPixData[2];
+	
+	if (redValue > (prevRedValue - sensitivity) && redValue < (prevRedValue + sensitivity)) {
+		if (greenValue > (prevGreenValue - sensitivity) && greenValue < (prevGreenValue + sensitivity)) {
+			if (blueValue > (prevBlueValue - sensitivity) && blueValue < (prevBlueValue + sensitivity)) {
+			
+			return true;
+			
+			}
+		}
+	}
+	else {
+		return false;
+	}
+}
+
+function displayPixelData(){
+
+	getPixelData();
+
+	var t = document.createElement("TABLE");
+	t.setAttribute("id", "table2");
+	document.body.appendChild(t);
+
+	var colorCount = 0;
+	var color = "";
+	var finalPixel = false;
+	
+	for (let x = 0; x < canvas.width; x++) {
+	
+		colorCount = 0;
+	
+		var r = document.createElement("TR");
+		r.setAttribute("id", "row" + x);
+		document.getElementById("table2").appendChild(r);
+	
+		for (let y = 0; y < canvas.height+1; y++) {
 			//check if previous colour was the same
-			if (!(x == 0)){ //very first pixel has no previous pixel
+			if (!(y == 0)){ //very first pixel in row has no previous pixel
 				
-				if (pixelGrid[x][y] == pixelGrid[x-1][y]) {
+				<!-- NEED A METHOD TO GROUP SIMILAR COLOURS -->
+				//if R/G/B falls within actual value +/- sensitivity value
+				//get previous colour saved locally
+				//create boolean sameAsPrevious, which will be set to true if current is within sesitivity values of last colour
+				var previousColor = pixelGrid[x][y-1];
+				
+				if (pixelSameColor(x, y, x, y-1)) {
 					//previous pixel was same colour 
-					colorCount++
+					colorCount++;
 				}
 				else {
 					//colour must have changed so record colour count and rgba
-					console.log('Colour: ' + rgba, 'Amount: ' + colorCount);
-					colorCount = 0;
+					//document.getElementById("pixel-grid-data").innerHTML += ("<br />" + (color + " x" + colorCount));
+					
+					addToGrid(color, colorCount, x);
+					
+					//reset count for next colour
+					colorCount = 1;
 				}
 				
 			}
-			else {
-				//must be the first pixel in the row
-				
+			
+			else if (x == canvas.width && y == canvas.height) {
+				//must be the final pixel
+				addToGrid(color, colorCount, x);
+				finalPixel = true;
 			}
-			//if so increase current colour count
-			//when the colour changes, commit colour and count to record
+			
+			else {
+				//must be the first pixel in the row - just increase count and don't compare
+				colorCount++;
+			}
+			
+			if (!finalPixel) {color = pixelGrid[x][y]}
+			else {return}
 		}
 	}
+}
+
+function addToGrid(color, colorCount, rowNum) {
+
+	var c = document.createElement("TD");
+	c.appendChild(document.createTextNode("x" + colorCount));
+	c.style.backgroundColor = color;
+	document.getElementById("row" + rowNum).appendChild(c);
+	
 }
 
 canvas.addEventListener('mousemove', function(event) {
